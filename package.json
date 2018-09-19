@@ -1,0 +1,28 @@
+{
+  "name": "promiseplus",
+  "version": "0.0.1",
+  "description": "Promises with cancellation, timeout.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jasmine"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jasmith79/promiseplus.git"
+  },
+  "keywords": [
+    "Promises"
+  ],
+  "author": "jasmith79",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jasmith79/promiseplus/issues"
+  },
+  "homepage": "https://github.com/jasmith79/promiseplus#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
+    "babel-preset-env": "^1.7.0",
+    "jasmine": "^3.2.0"
+  }
+}
