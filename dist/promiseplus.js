@@ -85,6 +85,13 @@
     return CancellationError;
   }(Error);
 
+  var counter = 0;
+
+  var addCancellationSubscriber = function addCancellationSubscriber(parent, child) {
+    var arr = cancellations.get(parent) || [];
+    cancellations.set(parent, arr);
+  };
+
   var LazyPromisePlus = function () {
     function LazyPromisePlus(cb) {
       var timeout = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -95,9 +102,11 @@
       this._timeout = timeout;
       this._callback = cb;
       this._promise = null;
-      this._cancellationError = null;
+      this._error = null;
       this._rejector = function () {};
       this._completed = false;
+      this._rejector = null;
+      this.count = ++counter;
     }
 
     _createClass(LazyPromisePlus, [{
@@ -112,17 +121,19 @@
 
         if (!this._promise && !this.cancelled) {
           var p = this._callback ? new Promise(this._callback) : Promise.resolve();
-          this._rejector = this._promise = new Promise(function (res, rej) {
+          this._promise = new Promise(function (res, rej) {
+            _this2._rejector = rej;
             if (_this2._timeout) {
               setTimeout(rej.bind(null, new Error('Promise reached timeout of ' + _this2._timeout + ' milliseconds.')), _this2._timeout);
             }
 
             // Yes, yes, anti-pattern blah, blah. No clean way to do this AFAIK.
             p.then(function (success) {
-              if (_this2.cancelled) rej(_this2._cancellationError);
+              if (_this2.cancelled) rej(_this2._error);
               res(success);
             }, function (fail) {
-              if (_this2.cancelled) rej(_this2._cancellationError);
+              console.log('Erro ' + Object.prototype.toString.call(fail));
+              if (_this2.cancelled) rej(_this2._error);
               rej(fail);
             });
           });
@@ -137,17 +148,13 @@
 
         if (this.cancelled) return this._promise.catch(fail);
         var p = LazyPromisePlus.of(this._init().then(function (result) {
-          console.log('Completing');
+          console.log('Succeding ' + _this3.count);
           _this3._completed = true;
           return success(result);
-        }, function (err) {
-          console.log('Completing');
-          _this3._completed = true;
-          return fail(err);
         }));
 
-        cancellations.set(p, this);
-        return p;
+        addCancellationSubscriber(this, p);
+        return fail ? p.catch(fail) : p;
       }
     }, {
       key: 'catch',
@@ -160,20 +167,35 @@
           return fail(err);
         }));
 
-        cancellations.set(p, this);
+        addCancellationSubscriber(this, p);
         return p;
       }
     }, {
       key: 'cancel',
-      value: function cancel(message) {
-        console.log('Cancelling');
+      value: function cancel(message, err) {
+        var _this5 = this;
+
+        console.log('Cancelling ' + this.count);
         if (!this._completed) {
+          this._completed = true;
           this.cancelled = true;
 
-          var msg = message ? ' with reason: ' + message : '';
           // Here we'll want to preserve the cancellation stack for debugging.
-          this._cancellationError = new CancellationError('Cancelled Promise ' + msg);
-          this._promise = Promise.reject(this._cancellationError);
+          var msg = message ? ' with reason: ' + message : '';
+          this._error = err || new Error('Cancelled Promise ' + msg);
+
+          // propagate cancellations
+          var arr = cancellations.get(this) || [];
+          arr.forEach(function (p) {
+            p.cancel(msg, _this5._error);
+          });
+
+          // The LazyP may not have been initialized
+          if (this._promise) {
+            this._rejector(this._error);
+          } else {
+            this._promise = Promise.reject(this._error);
+          }
         }
         return this;
       }
@@ -192,7 +214,9 @@
       key: 'cancelled',
       get: function get() {
         var parent = cancellations.get(this);
-        return this._cancelled || parent && parent.cancelled;
+        console.log('\'this\' is ' + this.count + ' with parent ' + (parent && parent.count));
+        console.log('this._cancelled ' + this._cancelled + ' parent ' + (parent && parent.cancelled));
+        return this._cancelled || Boolean(parent && parent.cancelled);
       },
       set: function set(arg) {
         this._cancelled = Boolean(arg);
@@ -226,10 +250,10 @@
     function PromisePlus(cb, timeout) {
       _classCallCheck(this, PromisePlus);
 
-      var _this5 = _possibleConstructorReturn(this, (PromisePlus.__proto__ || Object.getPrototypeOf(PromisePlus)).call(this, cb, timeout));
+      var _this6 = _possibleConstructorReturn(this, (PromisePlus.__proto__ || Object.getPrototypeOf(PromisePlus)).call(this, cb, timeout));
 
-      _this5._init();
-      return _this5;
+      _this6._init();
+      return _this6;
     }
 
     return PromisePlus;

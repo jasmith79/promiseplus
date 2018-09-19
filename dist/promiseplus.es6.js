@@ -12,15 +12,24 @@ class CancellationError extends Error {
   }
 }
 
+let counter = 0;
+
+const addCancellationSubscriber = (parent, child) => {
+  const arr = cancellations.get(parent) || [];
+  cancellations.set(parent, arr);
+};
+
 class LazyPromisePlus {
   constructor (cb, timeout=0) {
     this._cancelled = false;
     this._timeout = timeout;
     this._callback = cb;
     this._promise = null;
-    this._cancellationError = null;
+    this._error = null;
     this._rejector = function(){};
     this._completed = false;
+    this._rejector = null;
+    this.count = ++counter;
   }
 
   of (arg, timeout) {
@@ -29,7 +38,9 @@ class LazyPromisePlus {
 
   get cancelled () {
     const parent = cancellations.get(this);
-    return this._cancelled || (parent && parent.cancelled);
+    console.log(`'this' is ${this.count} with parent ${parent && parent.count}`);
+    console.log(`this._cancelled ${this._cancelled} parent ${parent && parent.cancelled}`);
+    return this._cancelled || Boolean(parent && parent.cancelled);
   }
 
   set cancelled (arg) {
@@ -39,8 +50,8 @@ class LazyPromisePlus {
   _init () {
     if (!this._promise && !this.cancelled) {
       const p = this._callback ? new Promise(this._callback) : Promise.resolve();
-      this._rejector =
       this._promise = new Promise((res, rej) => {
+        this._rejector = rej;
         if (this._timeout) {
           setTimeout(
             rej.bind(
@@ -54,12 +65,13 @@ class LazyPromisePlus {
         // Yes, yes, anti-pattern blah, blah. No clean way to do this AFAIK.
         p.then(
           success => {
-            if (this.cancelled) rej(this._cancellationError);
+            if (this.cancelled) rej(this._error);
             res(success);
           },
 
           fail => {
-            if (this.cancelled) rej(this._cancellationError);
+            console.log('Erro ' + Object.prototype.toString.call(fail));
+            if (this.cancelled) rej(this._error);
             rej(fail);
           }
         );
@@ -71,21 +83,14 @@ class LazyPromisePlus {
 
   then (success, fail) {
     if (this.cancelled) return this._promise.catch(fail);
-    const p = LazyPromisePlus.of(this._init().then(
-      result => {
-        console.log('Completing');
-        this._completed = true;
-        return success(result);
-      },
-      err => {
-        console.log('Completing');
-        this._completed = true;
-        return fail(err);
-      }
-    ));
+    const p = LazyPromisePlus.of(this._init().then(result => {
+      console.log('Succeding ' + this.count);
+      this._completed = true;
+      return success(result);
+    }));
 
-    cancellations.set(p, this);
-    return p;
+    addCancellationSubscriber(this, p);
+    return fail ? p.catch(fail) : p;
   }
 
   catch (fail) {
@@ -95,19 +100,32 @@ class LazyPromisePlus {
       return fail(err);
     }));
 
-    cancellations.set(p, this);
+    addCancellationSubscriber(this, p);
     return p;
   }
 
-  cancel (message) {
-    console.log('Cancelling');
+  cancel (message, err) {
+    console.log('Cancelling ' + this.count);
     if (!this._completed) {
+      this._completed = true;
       this.cancelled = true;
 
-      const msg = message ? ` with reason: ${message}` : '';
       // Here we'll want to preserve the cancellation stack for debugging.
-      this._cancellationError = new CancellationError(`Cancelled Promise ${msg}`);
-      this._promise = Promise.reject(this._cancellationError);
+      const msg = message ? ` with reason: ${message}` : '';
+      this._error = err || new Error(`Cancelled Promise ${msg}`);
+
+      // propagate cancellations
+      const arr = cancellations.get(this) || [];
+      arr.forEach(p => {
+        p.cancel(msg, this._error);
+      });
+
+      // The LazyP may not have been initialized
+      if (this._promise) {
+        this._rejector(this._error);
+      } else {
+        this._promise = Promise.reject(this._error);
+      }
     }
     return this;
   }
