@@ -1,5 +1,5 @@
 {
-  "name": "promiseplus",
+  "name": "@jasmith79/promiseplus",
   "version": "0.0.1",
   "description": "Promises with cancellation, timeout.",
   "main": "index.js",
