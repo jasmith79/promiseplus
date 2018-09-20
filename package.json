@@ -1,6 +1,6 @@
 {
   "name": "@jasmith79/promiseplus",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Promises with cancellation, timeout.",
   "main": "index.js",
   "scripts": {
