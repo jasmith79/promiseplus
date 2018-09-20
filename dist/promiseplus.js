@@ -132,7 +132,6 @@
               if (_this2.cancelled) rej(_this2._error);
               res(success);
             }, function (fail) {
-              console.log('Erro ' + Object.prototype.toString.call(fail));
               if (_this2.cancelled) rej(_this2._error);
               rej(fail);
             });
@@ -148,7 +147,6 @@
 
         if (this.cancelled) return this._promise.catch(fail);
         var p = LazyPromisePlus.of(this._init().then(function (result) {
-          console.log('Succeding ' + _this3.count);
           _this3._completed = true;
           return success(result);
         }));
@@ -175,7 +173,6 @@
       value: function cancel(message, err) {
         var _this5 = this;
 
-        console.log('Cancelling ' + this.count);
         if (!this._completed) {
           this._completed = true;
           this.cancelled = true;
@@ -214,8 +211,6 @@
       key: 'cancelled',
       get: function get() {
         var parent = cancellations.get(this);
-        console.log('\'this\' is ' + this.count + ' with parent ' + (parent && parent.count));
-        console.log('this._cancelled ' + this._cancelled + ' parent ' + (parent && parent.cancelled));
         return this._cancelled || Boolean(parent && parent.cancelled);
       },
       set: function set(arg) {

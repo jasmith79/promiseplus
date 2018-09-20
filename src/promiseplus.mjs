@@ -38,8 +38,6 @@ class LazyPromisePlus {
 
   get cancelled () {
     const parent = cancellations.get(this);
-    console.log(`'this' is ${this.count} with parent ${parent && parent.count}`);
-    console.log(`this._cancelled ${this._cancelled} parent ${parent && parent.cancelled}`);
     return this._cancelled || Boolean(parent && parent.cancelled);
   }
 
@@ -70,7 +68,6 @@ class LazyPromisePlus {
           },
 
           fail => {
-            console.log('Erro ' + Object.prototype.toString.call(fail));
             if (this.cancelled) rej(this._error);
             rej(fail);
           }
@@ -84,7 +81,6 @@ class LazyPromisePlus {
   then (success, fail) {
     if (this.cancelled) return this._promise.catch(fail);
     const p = LazyPromisePlus.of(this._init().then(result => {
-      console.log('Succeding ' + this.count);
       this._completed = true;
       return success(result);
     }));
@@ -105,7 +101,6 @@ class LazyPromisePlus {
   }
 
   cancel (message, err) {
-    console.log('Cancelling ' + this.count);
     if (!this._completed) {
       this._completed = true;
       this.cancelled = true;
