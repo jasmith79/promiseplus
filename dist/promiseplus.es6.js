@@ -137,21 +137,18 @@ class LazyPromisePlus {
 
 // Class methods
 LazyPromisePlus.of = (arg, timeout) => {
-  let p = null;
-  if (arg && arg.then) p = arg;
-  if (typeof arg === 'function') p = new Promise(arg);
-
-  if (p === null) {
-    throw new TypeError(`Cannot convert argument to LazyPromisePlus.`);
+  if (typeof arg === 'function') return new LazyPromisePlus(arg);
+  if (arg && arg.then) {
+    return new LazyPromisePlus((resolve, reject) => {
+      arg.then(resolve, reject);
+    }, timeout);
+  } else {
+    return new LazyPromisePlus(res)
   }
-
-  return new LazyPromisePlus((resolve, reject) => {
-    p.then(resolve, reject);
-  }, timeout);
 };
 
-LazyPromisePlus.resolve = Promise.resolve;
-LazyPromisePlus.reject = Promise.reject;
+LazyPromisePlus.resolve = x => LazyPromisePlus.of(Promise.resolve(x));
+LazyPromisePlus.reject = x => LazyPromisePlus.of(Promise.reject(x));
 
 class PromisePlus extends LazyPromisePlus {
   constructor (cb, timeout) {
@@ -159,6 +156,17 @@ class PromisePlus extends LazyPromisePlus {
     this._init();
   }
 }
+
+PromisePlus.of = (arg, timeout) => {
+  if (typeof arg === 'function') return new PromisePlus(arg);
+  if (arg && arg.then) {
+    return new PromisePlus((resolve, reject) => {
+      arg.then(resolve, reject);
+    }, timeout);
+  } else {
+    throw new TypeError(`Cannot convert argument to PromisePlus.`);
+  }
+};
 
 export {
   PromisePlus,

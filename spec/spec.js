@@ -184,6 +184,49 @@ describe('LazyPromisePlus', () => {
         done.fail(err);
       });
   });
+
+  it('has a class method for converting an existing Promise to a LazyPromisePlus', done => {
+    const a = new Promise(res => {
+      setTimeout(res, 5, 'foo');
+    });
+
+    const b = LazyPromisePlus.of(a);
+    const c = LazyPromisePlus.of(a, 1);
+    const d = LazyPromisePlus.of(a);
+    const e = d.finally(x => x);
+    d.cancel();
+
+    Promise.all([
+      a,
+      b.finally(x => x),
+      c.finally(x => x),
+      e,
+    ])
+      .then(([a, b, c, e]) => {
+        expect(a).toBe('foo');
+        expect(b).toBe('foo');
+        expect(c && c.message).toBe('Promise reached timeout of 1 milliseconds.');
+        expect(e && e.message).toBe('Cancelled Promise ');
+        done();
+      })
+      .catch(err => {
+        done.fail(err);
+      });
+  });
+
+  it('has class methods for immediately resolving/rejecting a LazyPromisePlus', done => {
+    const a = LazyPromisePlus.resolve(3);
+    const b = LazyPromisePlus.reject(new Error('foo')).catch(x => x);
+    Promise.all([a, b])
+      .then(([a, b]) => {
+        expect(a).toBe(3);
+        expect(b && b.message).toBe('foo');
+        done();
+      })
+      .catch(err => {
+        done.fail(err);
+      });
+  });
 });
 
 
@@ -351,6 +394,49 @@ describe('PromisePlus', () => {
     promise
       .then(t => {
         expect(t).toBe('foo');
+        done();
+      })
+      .catch(err => {
+        done.fail(err);
+      });
+  });
+
+  it('has a class method for converting an existing Promise to a PromisePlus', done => {
+    const a = new Promise(res => {
+      setTimeout(res, 5, 'foo');
+    });
+
+    const b = PromisePlus.of(a);
+    const c = PromisePlus.of(a, 1);
+    const d = PromisePlus.of(a);
+    const e = d.finally(x => x);
+    d.cancel();
+
+    Promise.all([
+      a,
+      b.finally(x => x),
+      c.finally(x => x),
+      e,
+    ])
+      .then(([a, b, c, e]) => {
+        expect(a).toBe('foo');
+        expect(b).toBe('foo');
+        expect(c && c.message).toBe('Promise reached timeout of 1 milliseconds.');
+        expect(e && e.message).toBe('Cancelled Promise ');
+        done();
+      })
+      .catch(err => {
+        done.fail(err);
+      });
+  });
+
+  it('has class methods for immediately resolving/rejecting a PromisePlus', done => {
+    const a = PromisePlus.resolve(3);
+    const b = PromisePlus.reject(new Error('foo')).catch(x => x);
+    Promise.all([a, b])
+      .then(([a, b]) => {
+        expect(a).toBe(3);
+        expect(b && b.message).toBe('foo');
         done();
       })
       .catch(err => {

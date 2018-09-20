@@ -223,21 +223,22 @@
 
   // Class methods
   LazyPromisePlus.of = function (arg, timeout) {
-    var p = null;
-    if (arg && arg.then) p = arg;
-    if (typeof arg === 'function') p = new Promise(arg);
-
-    if (p === null) {
-      throw new TypeError('Cannot convert argument to LazyPromisePlus.');
+    if (typeof arg === 'function') return new LazyPromisePlus(arg);
+    if (arg && arg.then) {
+      return new LazyPromisePlus(function (resolve, reject) {
+        arg.then(resolve, reject);
+      }, timeout);
+    } else {
+      return new LazyPromisePlus(res);
     }
-
-    return new LazyPromisePlus(function (resolve, reject) {
-      p.then(resolve, reject);
-    }, timeout);
   };
 
-  LazyPromisePlus.resolve = Promise.resolve;
-  LazyPromisePlus.reject = Promise.reject;
+  LazyPromisePlus.resolve = function (x) {
+    return LazyPromisePlus.of(Promise.resolve(x));
+  };
+  LazyPromisePlus.reject = function (x) {
+    return LazyPromisePlus.of(Promise.reject(x));
+  };
 
   var PromisePlus = function (_LazyPromisePlus) {
     _inherits(PromisePlus, _LazyPromisePlus);
@@ -253,6 +254,17 @@
 
     return PromisePlus;
   }(LazyPromisePlus);
+
+  PromisePlus.of = function (arg, timeout) {
+    if (typeof arg === 'function') return new PromisePlus(arg);
+    if (arg && arg.then) {
+      return new PromisePlus(function (resolve, reject) {
+        arg.then(resolve, reject);
+      }, timeout);
+    } else {
+      throw new TypeError('Cannot convert argument to PromisePlus.');
+    }
+  };
 
   exports.PromisePlus = PromisePlus;
   exports.LazyPromisePlus = LazyPromisePlus;
