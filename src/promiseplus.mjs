@@ -1,4 +1,5 @@
 
+const identity = x => x;
 const cancellations = new WeakMap();
 
 class CancellationError extends Error {
@@ -12,7 +13,6 @@ class CancellationError extends Error {
   }
 }
 
-let counter = 0;
 
 const addCancellationSubscriber = (parent, child) => {
   const arr = cancellations.get(parent) || [];
@@ -29,7 +29,6 @@ class LazyPromisePlus {
     this._rejector = function(){};
     this._completed = false;
     this._rejector = null;
-    this.count = ++counter;
   }
 
   of (arg, timeout) {
@@ -149,6 +148,10 @@ LazyPromisePlus.of = (arg, timeout) => {
     p.then(resolve, reject);
   }, timeout);
 };
+
+LazyPromisePlus.every = ps => {
+  return Promise.all(ps.map(p => p.then(identity, identity)));
+}; 
 
 LazyPromisePlus.resolve = Promise.resolve;
 LazyPromisePlus.reject = Promise.reject;

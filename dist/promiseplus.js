@@ -65,6 +65,9 @@
     if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
   }
 
+  var identity = function identity(x) {
+    return x;
+  };
   var cancellations = new WeakMap();
 
   var CancellationError = function (_Error) {
@@ -85,8 +88,6 @@
     return CancellationError;
   }(Error);
 
-  var counter = 0;
-
   var addCancellationSubscriber = function addCancellationSubscriber(parent, child) {
     var arr = cancellations.get(parent) || [];
     cancellations.set(parent, arr);
@@ -106,7 +107,6 @@
       this._rejector = function () {};
       this._completed = false;
       this._rejector = null;
-      this.count = ++counter;
     }
 
     _createClass(LazyPromisePlus, [{
@@ -234,6 +234,12 @@
     return new LazyPromisePlus(function (resolve, reject) {
       p.then(resolve, reject);
     }, timeout);
+  };
+
+  LazyPromisePlus.every = function (ps) {
+    return Promise.all(ps.map(function (p) {
+      return p.then(identity, identity);
+    }));
   };
 
   LazyPromisePlus.resolve = Promise.resolve;
