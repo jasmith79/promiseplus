@@ -6,11 +6,7 @@
  * @license MIT
  */
 
-const cancellations = new WeakMap();
-
-const addCancellationSubscriber = <X, Y>(parent: PromiseLike<X>, child: PromiseLike<Y>): void => {
-  cancellations.set(child, parent);
-};
+const cancellationErrorKey = '_PromisePlusCancellationError';
 
 /**
  * @description A lazy-initialized Promise with added capabilities like
@@ -115,6 +111,9 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
             if (!this.error) {
               this.completed = true;
               this.error = fail;
+              if (fail && fail[cancellationErrorKey]) {
+                this.cancelled = true;
+              }
             }
             rej(this.error);
           },
@@ -127,8 +126,7 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
   }
 
   get isCancelled(): boolean {
-    const parent = cancellations.get(this);
-    return this.cancelled || Boolean(parent && parent.isCancelled);
+    return this.cancelled;
   }
 
   /**
@@ -149,19 +147,19 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
    */
   public cancel(reason?: string | Error | null, legacy?: Error | null): this {
     if (!this.completed) {
-      this.cancelled = true;
       this.completed = true;
+      this.cancelled = true;
       this.error = reason instanceof Error
         ? reason
         : legacy instanceof Error
           ? legacy
           : new Error(reason || 'Cancelled PromisePlus.');
 
-      // Propagate the cancellation downwards
-      // TODO: fix type on forEach callback parameter.
-      const promiseChain = cancellations.get(this) || [];
-      promiseChain.forEach((p: any) => {
-        (p as LazyPromisePlus<any>).cancel('' + this.error, this.error);
+      Object.defineProperty(this.error, cancellationErrorKey, {
+        configurable: false,
+        enumerable: false,
+        value: true,
+        writable: false,
       });
 
       // May not have been initialized
@@ -201,7 +199,6 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
       ? LazyPromisePlus.of(this.promise.then(success, fail))
       : LazyPromisePlus.resolve();
 
-    addCancellationSubscriber(this, p);
     return p;
   }
 
@@ -220,7 +217,6 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
     this.init();
     const p = LazyPromisePlus.of((this.promise as Promise<T>).catch(fail));
 
-    addCancellationSubscriber((this as LazyPromisePlus<T>), p);
     return (p as LazyPromisePlus<T>);
   }
 

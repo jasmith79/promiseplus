@@ -97,7 +97,7 @@ describe('LazyPromisePlus', () => {
       p
         .then(() => done.fail(new Error('Should not hit this.')))
         .catch((err) => {
-          expect(err.message).toBe('');
+          expect(err.message).toBe('Cancelled PromisePlus.');
           done();
         });
       p.cancel();
@@ -108,7 +108,7 @@ describe('LazyPromisePlus', () => {
       p
         .then(() => done.fail(new Error('Should not hit this.')))
         .catch((err) => {
-          expect(err.message).toBe('');
+          expect(err.message).toBe('Cancelled PromisePlus.');
           done();
         });
       p.cancel();
@@ -240,7 +240,7 @@ describe('LazyPromisePlus', () => {
       .then(([x, y, z]) => {
         expect(x).toBe('foo');
         expect(y).toBe('foo');
-        expect(z && (z as Error).message).toBe('');
+        expect(z && (z as Error).message).toBe('Cancelled PromisePlus.');
         done();
       })
       .catch((err) => {
