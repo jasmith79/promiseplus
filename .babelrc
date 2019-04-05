@@ -1,11 +1,11 @@
 {
-  "plugins": ["transform-es2015-modules-umd"],
-  "presets": [
-    ["env", {
-      "targets": {
-        "browsers": ["ie >= 11"],
-        "node": "current"
-      }
-    }]
-  ]
+    "presets": [
+        "@babel/env",
+        "@babel/typescript"
+    ],
+    "plugins": [
+        "@babel/proposal-class-properties",
+        "@babel/proposal-object-rest-spread",
+        "babel-plugin-transform-es2015-modules-umd"
+    ]
 }
