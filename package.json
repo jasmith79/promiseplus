@@ -1,6 +1,6 @@
 {
   "name": "@jasmith79/promiseplus",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Promises with cancellation, timeout, lazy initialization.",
   "main": "dist/index.js",
   "module": "dist/promiseplus.js",
