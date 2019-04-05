@@ -1,272 +1,273 @@
-(function (global, factory) {
-  if (typeof define === "function" && define.amd) {
-    define(['exports'], factory);
-  } else if (typeof exports !== "undefined") {
-    factory(exports);
-  } else {
-    var mod = {
-      exports: {}
-    };
-    factory(mod.exports);
-    global.promiseplus = mod.exports;
-  }
-})(this, function (exports) {
-  'use strict';
-
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-
-  var _createClass = function () {
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i++) {
-        var descriptor = props[i];
-        descriptor.enumerable = descriptor.enumerable || false;
-        descriptor.configurable = true;
-        if ("value" in descriptor) descriptor.writable = true;
-        Object.defineProperty(target, descriptor.key, descriptor);
-      }
+/**
+ * promiseplus
+ *
+ * @author jasmith79
+ * @copyright 2018
+ * @license MIT
+ */
+const cancellations = new WeakMap();
+const addCancellationSubscriber = (parent, child) => {
+    cancellations.set(child, parent);
+};
+/**
+ * @description A lazy-initialized Promise with added capabilities like
+ * timeouts and cancellation. Calls the function passed to the
+ * constructor only once .then, .catch, or .finally have been called.
+ *
+ * @param callback the function that recieves the resolve and reject parameters.
+ * @param timeout the amount of time in milliseconds to wait before automatically
+ * rejecting. Readonly. Optional.
+ */
+export class LazyPromisePlus {
+    constructor(callback, timeout) {
+        this.callback = callback;
+        this.timeout = timeout;
+        this.cancelled = false;
+        this.completed = false;
+        this.promise = null;
+        this.error = null;
+        this.rejector = null;
     }
-
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  }();
-
-  function _classCallCheck(instance, Constructor) {
-    if (!(instance instanceof Constructor)) {
-      throw new TypeError("Cannot call a class as a function");
+    /**
+     * @description Wraps the passed in value as a LazyPromisePlus. Has the auto-flattening
+     * semantics for Promises, LazyPromisePlusses, and PromisePlusses. **NOTE:** unlike
+     * calling the constructor directly, since there is no callback to delay the underlying
+     * Promise is immediately constructed.
+     *
+     * @param value The value to wrap.
+     * @returns A LazyPromisePlus of the value.
+     */
+    static of(value) {
+        return new LazyPromisePlus((resolve) => resolve(value));
     }
-  }
-
-  function _possibleConstructorReturn(self, call) {
-    if (!self) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    /**
+     * @description Alias for LazyPromisePlus.of.
+     * @alias LazyPromisePlus.of
+     */
+    static resolve(value) {
+        return LazyPromisePlus.of(value);
     }
-
-    return call && (typeof call === "object" || typeof call === "function") ? call : self;
-  }
-
-  function _inherits(subClass, superClass) {
-    if (typeof superClass !== "function" && superClass !== null) {
-      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    /**
+     * @description Immediately rejects a LazyPromisePlus with the provided Error or
+     * an Error constructed from the provided message (empty string if null).
+     *
+     * @param reason The desired rejection message/error.
+     * @returns A LazyPromisePlus rejected with the error.
+     */
+    static reject(reason) {
+        const error = reason instanceof Error
+            ? reason
+            : new Error(reason || '');
+        return new LazyPromisePlus((resolve, reject) => {
+            reject(error);
+        }).init();
     }
-
-    subClass.prototype = Object.create(superClass && superClass.prototype, {
-      constructor: {
-        value: subClass,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-  }
-
-  var cancellations = new WeakMap();
-
-  var CancellationError = function (_Error) {
-    _inherits(CancellationError, _Error);
-
-    function CancellationError(message) {
-      _classCallCheck(this, CancellationError);
-
-      var _this = _possibleConstructorReturn(this, (CancellationError.__proto__ || Object.getPrototypeOf(CancellationError)).call(this, message));
-
-      // Following is necessary to maintain instanceof accuracy after transpilation
-      _this.constructor = CancellationError;
-      _this.__proto__ = CancellationError.prototype;
-      _this.message = message;
-      return _this;
-    }
-
-    return CancellationError;
-  }(Error);
-
-  var counter = 0;
-
-  var addCancellationSubscriber = function addCancellationSubscriber(parent, child) {
-    var arr = cancellations.get(parent) || [];
-    cancellations.set(parent, arr);
-  };
-
-  var LazyPromisePlus = function () {
-    function LazyPromisePlus(cb) {
-      var timeout = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-      _classCallCheck(this, LazyPromisePlus);
-
-      this._cancelled = false;
-      this._timeout = timeout;
-      this._callback = cb;
-      this._promise = null;
-      this._error = null;
-      this._rejector = function () {};
-      this._completed = false;
-      this._rejector = null;
-      this.count = ++counter;
-    }
-
-    _createClass(LazyPromisePlus, [{
-      key: 'of',
-      value: function of(arg, timeout) {
-        return LazyPromisePlus.of(arg, timeout);
-      }
-    }, {
-      key: '_init',
-      value: function _init() {
-        var _this2 = this;
-
-        if (!this._promise && !this.cancelled) {
-          var p = this._callback ? new Promise(this._callback) : Promise.resolve();
-          this._promise = new Promise(function (res, rej) {
-            _this2._rejector = rej;
-            if (_this2._timeout) {
-              setTimeout(rej.bind(null, new Error('Promise reached timeout of ' + _this2._timeout + ' milliseconds.')), _this2._timeout);
-            }
-
-            // Yes, yes, anti-pattern blah, blah. No clean way to do this AFAIK.
-            p.then(function (success) {
-              if (_this2.cancelled) rej(_this2._error);
-              res(success);
-            }, function (fail) {
-              if (_this2.cancelled) rej(_this2._error);
-              rej(fail);
+    /**
+     * @description Initializes the LazyPromisePlus, calls the callback passed to the
+     * constructor and builds the underlying Promise.
+     *
+     * @returns This.
+     */
+    init() {
+        if (!this.promise && !this.isCancelled) {
+            const p = new Promise(this.callback);
+            // Yes, yes, anti-pattern, I know. No clean way to do this AFAIK.
+            // Since cancellation needs to be able to reject the promise from the
+            // outside, need to use the constructor here to get access to that
+            // parameter rather than simply chaining .then or throwing.
+            this.promise = new Promise((res, rej) => {
+                this.rejector = rej;
+                if (this.timeout) {
+                    setTimeout(rej.bind(null, new Error(`Promise reached timeout of ${this.timeout} milliseconds.`)), this.timeout);
+                }
+                p.then((success) => {
+                    this.completed = true;
+                    if (this.isCancelled) {
+                        rej(this.error);
+                    }
+                    res(success);
+                }, (fail) => {
+                    // Previous errors like cancellation take precedence.
+                    if (!this.error) {
+                        this.completed = true;
+                        this.error = fail;
+                    }
+                    rej(this.error);
+                });
             });
-          });
         }
-
-        return this._promise;
-      }
-    }, {
-      key: 'then',
-      value: function then(success, fail) {
-        var _this3 = this;
-
-        if (this.cancelled) return this._promise.catch(fail);
-        var p = LazyPromisePlus.of(this._init().then(function (result) {
-          _this3._completed = true;
-          return success(result);
-        }));
-
-        addCancellationSubscriber(this, p);
-        return fail ? p.catch(fail) : p;
-      }
-    }, {
-      key: 'catch',
-      value: function _catch(fail) {
-        var _this4 = this;
-
-        if (this.cancelled) return this._promise.catch(fail);
-        var p = LazyPromisePlus.of(this._init().catch(function (err) {
-          _this4._completed = true;
-          return fail(err);
-        }));
-
-        addCancellationSubscriber(this, p);
-        return p;
-      }
-    }, {
-      key: 'cancel',
-      value: function cancel(message, err) {
-        var _this5 = this;
-
-        if (!this._completed) {
-          this._completed = true;
-          this.cancelled = true;
-
-          // Here we'll want to preserve the cancellation stack for debugging.
-          var msg = message ? ' with reason: ' + message : '';
-          this._error = err || new Error('Cancelled Promise ' + msg);
-
-          // propagate cancellations
-          var arr = cancellations.get(this) || [];
-          arr.forEach(function (p) {
-            p.cancel(msg, _this5._error);
-          });
-
-          // The LazyP may not have been initialized
-          if (this._promise) {
-            this._rejector(this._error);
-          } else {
-            this._promise = Promise.reject(this._error);
-          }
+        // Surprised the compiler can't infer that this can't be null
+        return this;
+    }
+    get isCancelled() {
+        const parent = cancellations.get(this);
+        return this.cancelled || Boolean(parent && parent.isCancelled);
+    }
+    /**
+     * @description Cancels a pending PromsiePlus. If the Promise has already
+     * settled it's a noop. The Promise will immediately reject with the supplied
+     * Error instance or an Error created with the supplied message.
+     * NOTE: Cancellation will propagate *down* the Promise chain but not up.
+     * So if you have:
+     * const p1 = new LazyPromisePlus((res) => fetch('/some/slow/responding/url'));
+     * const p2 = p1.catch(console.error);
+     * p1.cancel('No Thanks');
+     * Then 'No Thanks' will log to the console as an error.
+     *
+     * @param reason The user-supplied reason for cancelling. Optional.
+     * @param legacy This is solely here for backwards compatibility with
+     * an older version of the API.
+     * @returns this.
+     */
+    cancel(reason, legacy) {
+        if (!this.completed) {
+            this.cancelled = true;
+            this.completed = true;
+            this.error = reason instanceof Error
+                ? reason
+                : legacy instanceof Error
+                    ? legacy
+                    : new Error(reason || 'Cancelled PromisePlus.');
+            // Propagate the cancellation downwards
+            // TODO: fix type on forEach callback parameter.
+            const promiseChain = cancellations.get(this) || [];
+            promiseChain.forEach((p) => {
+                p.cancel('' + this.error, this.error);
+            });
+            // May not have been initialized
+            if (this.promise) {
+                // If it has been though then it will have a rejector,
+                // this cannot be null but the compiler can't infer
+                // that so...
+                this.rejector(this.error);
+            }
+            else {
+                this.promise = Promise.reject(this.error);
+            }
         }
         return this;
-      }
-    }, {
-      key: 'finally',
-      value: function _finally(cb) {
-        var p = this._init();
-        return p.finally ? p.finally(cb) : p.then(cb, cb);
-      }
-    }, {
-      key: 'toPromise',
-      value: function toPromise() {
-        return this._init();
-      }
-    }, {
-      key: 'cancelled',
-      get: function get() {
-        var parent = cancellations.get(this);
-        return this._cancelled || Boolean(parent && parent.cancelled);
-      },
-      set: function set(arg) {
-        this._cancelled = Boolean(arg);
-      }
-    }]);
-
-    return LazyPromisePlus;
-  }();
-
-  // Class methods
-  LazyPromisePlus.of = function (arg, timeout) {
-    if (typeof arg === 'function') return new LazyPromisePlus(arg);
-    if (arg && arg.then) {
-      return new LazyPromisePlus(function (resolve, reject) {
-        arg.then(resolve, reject);
-      }, timeout);
-    } else {
-      return new LazyPromisePlus(res);
     }
-  };
-
-  LazyPromisePlus.resolve = function (x) {
-    return LazyPromisePlus.of(Promise.resolve(x));
-  };
-  LazyPromisePlus.reject = function (x) {
-    return LazyPromisePlus.of(Promise.reject(x));
-  };
-
-  var PromisePlus = function (_LazyPromisePlus) {
-    _inherits(PromisePlus, _LazyPromisePlus);
-
-    function PromisePlus(cb, timeout) {
-      _classCallCheck(this, PromisePlus);
-
-      var _this6 = _possibleConstructorReturn(this, (PromisePlus.__proto__ || Object.getPrototypeOf(PromisePlus)).call(this, cb, timeout));
-
-      _this6._init();
-      return _this6;
+    /**
+     * @description Just like Promise.prototype.then, but will
+     * call the init function lo initialize the LazyPromisePlus.
+     *
+     * @param success Handler function, called when the Promise resolves.
+     * @param fail Handler function, called when the Promise rejects.
+     * @returns
+     */
+    then(success, fail) {
+        if (this.isCancelled) {
+            return this.promise
+                ? LazyPromisePlus.of(this.promise.catch(fail))
+                : LazyPromisePlus.reject(new Error('Cancelled uninitialized LazyPromisePlus'));
+        }
+        this.init();
+        const p = this.promise
+            ? LazyPromisePlus.of(this.promise.then(success, fail))
+            : LazyPromisePlus.resolve();
+        addCancellationSubscriber(this, p);
+        return p;
     }
-
-    return PromisePlus;
-  }(LazyPromisePlus);
-
-  PromisePlus.of = function (arg, timeout) {
-    if (typeof arg === 'function') return new PromisePlus(arg);
-    if (arg && arg.then) {
-      return new PromisePlus(function (resolve, reject) {
-        arg.then(resolve, reject);
-      }, timeout);
-    } else {
-      throw new TypeError('Cannot convert argument to PromisePlus.');
+    /**
+     * @description Just like Promise.prototype.catch, but will
+     * call the init function lo initialize the LazyPromisePlus.
+     *
+     * @param fail Handler function, called when the Promise rejects.
+     * @returns
+     */
+    catch(fail) {
+        if (this.isCancelled) {
+            return LazyPromisePlus.of(this.error);
+        }
+        this.init();
+        const p = LazyPromisePlus.of(this.promise.catch(fail));
+        addCancellationSubscriber(this, p);
+        return p;
     }
-  };
-
-  exports.PromisePlus = PromisePlus;
-  exports.LazyPromisePlus = LazyPromisePlus;
-  exports.default = PromisePlus;
-});
+    /**
+     * @description Just like Promise.prototype.finally, but will
+     * call the init function lo initialize the LazyPromisePlus. If the underlying
+     * Promise doesn't yet implement .finally, this method will mimic the proper
+     * semantics with .then.
+     *
+     * @param callback Will be called when the Promise settles, although it returns a new
+     * LazyPromisePlus, it will have the value of the settled Promise it chains off of.
+     * @returns LazyPromisePlus.
+     */
+    finally(callback) {
+        this.init();
+        // this.promise cannot be null here, but the compiler can't infer.
+        if (this.promise && 'finally' in this.promise) {
+            const cb = (value) => {
+                callback();
+                return value;
+            };
+            return LazyPromisePlus.of(this.promise.then(cb, cb));
+        }
+        else if (this.promise) {
+            return LazyPromisePlus.of(this.promise.finally(callback));
+        }
+        else {
+            return LazyPromisePlus.of(void 0);
+        }
+    }
+    /**
+     * @description Will return the underlying Promise object. An escape hatch in case an API
+     * requires an actual Promise (e.g. verfied via instanceof) rather than a generic thenable.
+     * If the LazyPromisePlus has not been initialized, this method will call init.
+     *
+     * @returns The underlying Promise object.
+     */
+    toPromise() {
+        return this.promise || this.init().promise;
+    }
+}
+/**
+ * @description A Thenable with added capabilities like
+ * timeouts and cancellation.
+ *
+ * @param callback the function that recieves the resolve and reject parameters.
+ * @param timeout the amount of time in milliseconds to wait before automatically
+ * rejecting. Readonly. Optional.
+ */
+export class PromisePlus extends LazyPromisePlus {
+    constructor(callback, timeout) {
+        super(callback, timeout);
+        this.callback = callback;
+        this.timeout = timeout;
+        this.init();
+    }
+    /**
+     * @description Wraps the passed in value as a PromisePlus. Has the auto-flattening
+     * semantics for Promises, LazyPromisePlusses, and PromisePlusses.
+     *
+     * @param value The value to wrap.
+     * @returns A LazyPromisePlus of the value.
+     */
+    static of(value) {
+        return new PromisePlus((resolve) => resolve(value));
+    }
+    /**
+     * @description Alias for PromisePlus.of.
+     * @alias PromisePlus.of
+     */
+    static resolve(value) {
+        return PromisePlus.of(value);
+    }
+    /**
+     * @description Immediately rejects a PromisePlus with the provided Error or
+     * an Error constructed from the provided message (empty string if null).
+     *
+     * @param reason The desired rejection message/error.
+     * @returns A PromisePlus rejected with the error.
+     */
+    static reject(reason) {
+        const error = reason instanceof Error
+            ? reason
+            : new Error(reason || '');
+        return new PromisePlus((resolve, reject) => {
+            reject(error);
+        });
+    }
+}
+//# sourceMappingURL=promiseplus.js.map
