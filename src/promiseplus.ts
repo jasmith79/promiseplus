@@ -1,6 +1,8 @@
 /**
  * promiseplus
  *
+ * @description Enhanced Promises featuring timeouts, cancellation.
+ *
  * @author jasmith79
  * @copyright 2018
  * @license MIT

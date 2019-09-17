@@ -1,5 +1,12 @@
-/// <reference path='jasmine.d.ts'
-import 'jasmine';
+/**
+ * promiseplus.test
+ *
+ * @description Test files for PromisePlus.
+ *
+ * @author jasmith79
+ * @copyright 2018
+ * @license MIT
+ */
 
 import { LazyPromisePlus, PromisePlus } from '../src/promiseplus';
 
