@@ -268,6 +268,15 @@ describe('LazyPromisePlus', () => {
         done.fail(err);
       });
   });
+
+  it('has a class method for sleeping n milliseconds', async () => {
+    let a = 0;
+    const p = LazyPromisePlus.sleep(10).then(() => ++a);
+    expect(a).toBe(0);
+    await p;
+    expect(a).toBe(1);
+    return;
+  });
 });
 
 describe('PromisePlus', () => {
@@ -494,5 +503,14 @@ describe('PromisePlus', () => {
       .catch((err) => {
         done.fail(err);
       });
+  });
+
+  it('has a class method for sleeping n milliseconds', async () => {
+    let a = 0;
+    const p = PromisePlus.sleep(10).then(() => ++a);
+    expect(a).toBe(0);
+    await p;
+    expect(a).toBe(1);
+    return;
   });
 });
