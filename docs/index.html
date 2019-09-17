@@ -61,28 +61,35 @@
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
-			<section class="tsd-panel-group tsd-index-group">
-				<h2>Index</h2>
-				<section class="tsd-panel tsd-index-panel">
-					<div class="tsd-index-content">
-						<section class="tsd-index-section ">
-							<h3>External modules</h3>
-							<ul class="tsd-index-list">
-								<li class="tsd-kind-external-module"><a href="modules/_promiseplus_.html" class="tsd-kind-icon">"promiseplus"</a></li>
-							</ul>
-						</section>
-					</div>
-				</section>
-			</section>
+			<div class="tsd-panel tsd-typography">
+				<a href="#promiseplus" id="promiseplus" style="color: inherit; text-decoration: none;">
+					<h1>PromisePlus</h1>
+				</a>
+				<a href="#note-wip" id="note-wip" style="color: inherit; text-decoration: none;">
+					<h2>NOTE: WIP</h2>
+				</a>
+				<p>Adds a thenable with added capabilities: cancellation, timeouts, finally, lazy initialization, etc.</p>
+				<a href="#rationale" id="rationale" style="color: inherit; text-decoration: none;">
+					<h2>Rationale</h2>
+				</a>
+				<p>Native Promises are <em>slowly</em> starting to gain some sorely needed abilities but remain inadequate even for their flagship use case (i.e. representing the value of an AJAX request). There are some <em>great</em> Promise libraries in existence like Bluebird, but Bluebird made some (totally reasonable) design decisions that aren&#39;t quite what I&#39;m looking for. This is small and simple enough to get the job done, and has the slightly different semantics I wanted.</p>
+				<a href="#drop-the-burrito" id="drop-the-burrito" style="color: inherit; text-decoration: none;">
+					<h2>Drop the Burrito</h2>
+				</a>
+				<p>Native Promises auto-flatten by default (you can&#39;t have a Promise of a Promise of a thing, it just becomes a <code>Promise&lt;Thing&gt;</code>). This is arguably a mistake, since it means Promises are not Monads and thus cannot be fed to code that expects that interface. Despite the disadvantages, I&#39;ve kept the auto-flattening semantics for the sake of least surprise.</p>
+			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 			<nav class="tsd-navigation primary">
 				<ul>
-					<li class="globals current ">
+					<li class="globals  ">
 						<a href="globals.html"><em>Globals</em></a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_promiseplus_.html">"promiseplus"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_promiseplus_test_.html">"promiseplus.test"</a>
 					</li>
 				</ul>
 			</nav>
@@ -105,6 +112,7 @@
 				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
 				<li class="tsd-kind-index-signature"><span class="tsd-kind-icon">Index signature</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
@@ -153,7 +161,7 @@
 	</div>
 </footer>
 <div class="container tsd-generator">
-	<p>Generated using <a href="http://typedoc.org/" target="_blank">TypeDoc</a></p>
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
 </div>
 <div class="overlay"></div>
 <script src="assets/js/main.js"></script>

@@ -60,4 +60,7 @@ typings/
 # next.js build output
 .next
 
+# compiled test files
+dist/*.test.*
+
 diff.txt
