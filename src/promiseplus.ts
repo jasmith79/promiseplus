@@ -1,6 +1,8 @@
 /**
  * promiseplus
  *
+ * @description Enhanced Promises featuring timeouts, cancellation.
+ *
  * @author jasmith79
  * @copyright 2018
  * @license MIT
@@ -55,6 +57,18 @@ export class LazyPromisePlus<T> implements PromiseLike<T> {
     return new LazyPromisePlus((resolve, reject) => {
       reject(error);
     }).init();
+  }
+
+  /**
+   * @description Waits for ms milliseconds before resolving.
+   *
+   * @param ms The amount of time to wait before resolving in milliseconds.
+   * @returns LazyPromisePlus<void>
+   */
+  public static sleep(ms: number): LazyPromisePlus<void> {
+    return new LazyPromisePlus((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 
   protected cancelled: boolean = false;
@@ -312,6 +326,18 @@ export class PromisePlus<T> extends LazyPromisePlus<T> {
 
     return new PromisePlus((resolve, reject) => {
       reject(error);
+    });
+  }
+
+  /**
+   * @description Waits for ms milliseconds before resolving.
+   *
+   * @param ms The amount of time to wait before resolving in milliseconds.
+   * @returns LazyPromisePlus<void>
+   */
+  public static sleep(ms: number): PromisePlus<void> {
+    return new PromisePlus((resolve) => {
+      setTimeout(resolve, ms);
     });
   }
 }

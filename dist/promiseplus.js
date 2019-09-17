@@ -1,3 +1,4 @@
+"use strict";
 /**
  * promiseplus
  *
@@ -5,10 +6,8 @@
  * @copyright 2018
  * @license MIT
  */
-const cancellations = new WeakMap();
-const addCancellationSubscriber = (parent, child) => {
-    cancellations.set(child, parent);
-};
+Object.defineProperty(exports, "__esModule", { value: true });
+const cancellationErrorKey = '_PromisePlusCancellationError';
 /**
  * @description A lazy-initialized Promise with added capabilities like
  * timeouts and cancellation. Calls the function passed to the
@@ -18,7 +17,7 @@ const addCancellationSubscriber = (parent, child) => {
  * @param timeout the amount of time in milliseconds to wait before automatically
  * rejecting. Readonly. Optional.
  */
-export class LazyPromisePlus {
+class LazyPromisePlus {
     constructor(callback, timeout) {
         this.callback = callback;
         this.timeout = timeout;
@@ -91,6 +90,9 @@ export class LazyPromisePlus {
                     if (!this.error) {
                         this.completed = true;
                         this.error = fail;
+                        if (fail && fail[cancellationErrorKey]) {
+                            this.cancelled = true;
+                        }
                     }
                     rej(this.error);
                 });
@@ -100,8 +102,7 @@ export class LazyPromisePlus {
         return this;
     }
     get isCancelled() {
-        const parent = cancellations.get(this);
-        return this.cancelled || Boolean(parent && parent.isCancelled);
+        return this.cancelled;
     }
     /**
      * @description Cancels a pending PromsiePlus. If the Promise has already
@@ -121,18 +122,18 @@ export class LazyPromisePlus {
      */
     cancel(reason, legacy) {
         if (!this.completed) {
-            this.cancelled = true;
             this.completed = true;
+            this.cancelled = true;
             this.error = reason instanceof Error
                 ? reason
                 : legacy instanceof Error
                     ? legacy
                     : new Error(reason || 'Cancelled PromisePlus.');
-            // Propagate the cancellation downwards
-            // TODO: fix type on forEach callback parameter.
-            const promiseChain = cancellations.get(this) || [];
-            promiseChain.forEach((p) => {
-                p.cancel('' + this.error, this.error);
+            Object.defineProperty(this.error, cancellationErrorKey, {
+                configurable: false,
+                enumerable: false,
+                value: true,
+                writable: false,
             });
             // May not have been initialized
             if (this.promise) {
@@ -165,7 +166,6 @@ export class LazyPromisePlus {
         const p = this.promise
             ? LazyPromisePlus.of(this.promise.then(success, fail))
             : LazyPromisePlus.resolve();
-        addCancellationSubscriber(this, p);
         return p;
     }
     /**
@@ -181,7 +181,6 @@ export class LazyPromisePlus {
         }
         this.init();
         const p = LazyPromisePlus.of(this.promise.catch(fail));
-        addCancellationSubscriber(this, p);
         return p;
     }
     /**
@@ -222,6 +221,7 @@ export class LazyPromisePlus {
         return this.promise || this.init().promise;
     }
 }
+exports.LazyPromisePlus = LazyPromisePlus;
 /**
  * @description A Thenable with added capabilities like
  * timeouts and cancellation.
@@ -230,7 +230,7 @@ export class LazyPromisePlus {
  * @param timeout the amount of time in milliseconds to wait before automatically
  * rejecting. Readonly. Optional.
  */
-export class PromisePlus extends LazyPromisePlus {
+class PromisePlus extends LazyPromisePlus {
     constructor(callback, timeout) {
         super(callback, timeout);
         this.callback = callback;
@@ -270,4 +270,5 @@ export class PromisePlus extends LazyPromisePlus {
         });
     }
 }
+exports.PromisePlus = PromisePlus;
 //# sourceMappingURL=promiseplus.js.map
