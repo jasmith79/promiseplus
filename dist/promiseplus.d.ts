@@ -1,6 +1,8 @@
 /**
  * promiseplus
  *
+ * @description Enhanced Promises featuring timeouts, cancellation.
+ *
  * @author jasmith79
  * @copyright 2018
  * @license MIT
@@ -40,6 +42,13 @@ export declare class LazyPromisePlus<T> implements PromiseLike<T> {
      * @returns A LazyPromisePlus rejected with the error.
      */
     static reject(reason?: Error | string | null): LazyPromisePlus<{}>;
+    /**
+     * @description Waits for ms milliseconds before resolving.
+     *
+     * @param ms The amount of time to wait before resolving in milliseconds.
+     * @returns LazyPromisePlus<void>
+     */
+    static sleep(ms: number): LazyPromisePlus<void>;
     protected cancelled: boolean;
     protected completed: boolean;
     protected promise: Promise<T> | null;
@@ -141,4 +150,11 @@ export declare class PromisePlus<T> extends LazyPromisePlus<T> {
      * @returns A PromisePlus rejected with the error.
      */
     static reject(reason?: Error | string | null): PromisePlus<{}>;
+    /**
+     * @description Waits for ms milliseconds before resolving.
+     *
+     * @param ms The amount of time to wait before resolving in milliseconds.
+     * @returns LazyPromisePlus<void>
+     */
+    static sleep(ms: number): PromisePlus<void>;
 }
